@@ -1,0 +1,73 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Sample {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+  category    String? // "Social Media", "Video", "Blog", etc.
+  presetKey   String? // e.g., "youtube-thumbnail"
+
+  // Canvas properties
+  canvasWidth  Int
+  canvasHeight Int
+
+  // Background configuration
+  backgroundType  String // "solid", "gradient", "pattern"
+  backgroundColor String? // For solid backgrounds
+
+  // Gradient settings (store as JSON)
+  gradientConfig Json? // { type, colors[], direction }
+
+  // Pattern settings
+  patternId String?
+
+  // Relationships
+  textElements  TextElement[]
+  imageElements ImageElement[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model TextElement {
+  id       String @id @default(cuid())
+  sampleId String
+  sample   Sample @relation(fields: [sampleId], references: [id], onDelete: Cascade)
+
+  content    String
+  x          Float
+  y          Float
+  fontSize   Int
+  fontWeight String // "normal" or "bold"
+  fontStyle  String // "normal" or "italic"
+  color      String
+  textAlign  String // "left", "center", "right"
+  fontFamily String
+  zIndex     Int
+
+  createdAt DateTime @default(now())
+}
+
+model ImageElement {
+  id       String @id @default(cuid())
+  sampleId String
+  sample   Sample @relation(fields: [sampleId], references: [id], onDelete: Cascade)
+
+  imageData      String // Base64 encoded image
+  x              Float
+  y              Float
+  width          Float
+  height         Float
+  originalWidth  Float
+  originalHeight Float
+  zIndex         Int
+
+  createdAt DateTime @default(now())
+}

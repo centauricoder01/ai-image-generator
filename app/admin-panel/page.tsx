@@ -942,7 +942,6 @@ const ImageEditor: React.FC = () => {
     setResizeHandle("");
   };
 
-
   // Effect to redraw canvas
   useEffect(() => {
     drawCanvas();
@@ -1021,9 +1020,7 @@ const ImageEditor: React.FC = () => {
         <div className="p-6">
           {activeTab === "export" && (
             <div className="space-y-6">
-              <h3 className="text-lg font-bold text-gray-800">
-                Canvas & Save
-              </h3>
+              <h3 className="text-lg font-bold text-gray-800">Canvas & Save</h3>
 
               {/* Canvas Size */}
               <div>
@@ -1242,7 +1239,6 @@ const ImageEditor: React.FC = () => {
               </div>
 
               {/* Download Button */}
-              
             </div>
           )}
 

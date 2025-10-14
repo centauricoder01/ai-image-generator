@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@imgly/background-removal": "^1.7.0",
+    "@imgly/background-removal-node": "^1.4.5",
     "@prisma/client": "^6.16.3",
     "@radix-ui/react-accordion": "^1.2.0",
     "@radix-ui/react-alert-dialog": "^1.1.1",
@@ -21,14 +22,12 @@
     "@radix-ui/react-popover": "^1.1.1",
     "@radix-ui/react-separator": "^1.1.0",
     "@radix-ui/react-slider": "^1.2.0",
-    "@radix-ui/react-slot": "^1.1.0",
     "@radix-ui/react-tabs": "^1.1.0",
     "@radix-ui/react-toast": "^1.2.1",
     "@tabler/icons-react": "^3.17.0",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "cmdk": "^1.0.0",
-    "cobe": "^0.6.3",
     "framer-motion": "^11.7.0",
     "lucide-react": "^0.439.0",
     "mini-svg-data-uri": "^1.4.4",
@@ -49,7 +48,6 @@
     "@types/react-dom": "^18",
     "postcss": "^8",
     "prisma": "^6.16.3",
-    "supabase": "^1.191.3",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"
   }

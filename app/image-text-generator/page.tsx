@@ -632,6 +632,38 @@ const ImageEditor: React.FC = () => {
             textHeight + 10,
             8
           );
+
+          // Draw resize handles for text
+          const textBounds = {
+            x: borderX - 5,
+            y: text.y - text.fontSize - 5,
+            width: maxLineWidth + 10,
+            height: textHeight + 10,
+          };
+
+          const handles = [
+            { name: "nw", x: textBounds.x - 5, y: textBounds.y - 5 },
+            {
+              name: "ne",
+              x: textBounds.x + textBounds.width - 5,
+              y: textBounds.y - 5,
+            },
+            {
+              name: "sw",
+              x: textBounds.x - 5,
+              y: textBounds.y + textBounds.height - 5,
+            },
+            {
+              name: "se",
+              x: textBounds.x + textBounds.width - 5,
+              y: textBounds.y + textBounds.height - 5,
+            },
+          ];
+
+          handles.forEach((handle) => {
+            ctx.fillStyle = "white";
+            ctx.fillRect(handle.x, handle.y, 10, 10);
+          });
         }
       }
     });
@@ -779,7 +811,30 @@ const ImageEditor: React.FC = () => {
     const x = (event.clientX - rect.left) * scaleX;
     const y = (event.clientY - rect.top) * scaleY;
 
-    // Check for resize handles first
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    // Check for text resize handles first
+    if (selectedTextId) {
+      const selectedText = texts.find((text) => text.id === selectedTextId);
+      if (selectedText) {
+        const handles = getTextResizeHandles(selectedText, ctx);
+        for (const handle of handles) {
+          if (
+            x >= handle.x &&
+            x <= handle.x + 10 &&
+            y >= handle.y &&
+            y <= handle.y + 10
+          ) {
+            setIsResizing(true);
+            setResizeHandle(handle.name);
+            return;
+          }
+        }
+      }
+    }
+
+    // Check for image resize handles
     if (selectedImageId) {
       const selectedImage = images.find((img) => img.id === selectedImageId);
       if (selectedImage) {
@@ -821,7 +876,6 @@ const ImageEditor: React.FC = () => {
     }
   };
 
-  // Handle mouse move
   const handleMouseMove = (
     event: React.MouseEvent<HTMLCanvasElement>
   ): void => {
@@ -834,7 +888,38 @@ const ImageEditor: React.FC = () => {
     const x = (event.clientX - rect.left) * scaleX;
     const y = (event.clientY - rect.top) * scaleY;
 
-    if (isResizing && selectedImageId) {
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    if (isResizing && selectedTextId) {
+      const selectedText = texts.find((text) => text.id === selectedTextId);
+      if (selectedText) {
+        const handles = getTextResizeHandles(selectedText, ctx);
+        const currentHandle = handles.find((h) => h.name === resizeHandle);
+        if (!currentHandle) return;
+
+        const bounds = currentHandle.bounds;
+        let newFontSize = selectedText.fontSize;
+
+        if (resizeHandle.includes("e")) {
+          const newWidth = Math.max(50, x - bounds.x);
+          const widthRatio = newWidth / bounds.width;
+          newFontSize = Math.max(
+            12,
+            Math.round(selectedText.fontSize * widthRatio)
+          );
+        } else if (resizeHandle.includes("w")) {
+          const newWidth = Math.max(50, bounds.x + bounds.width - x);
+          const widthRatio = newWidth / bounds.width;
+          newFontSize = Math.max(
+            12,
+            Math.round(selectedText.fontSize * widthRatio)
+          );
+        }
+
+        updateText(selectedTextId, { fontSize: newFontSize });
+      }
+    } else if (isResizing && selectedImageId) {
       const selectedImage = images.find((img) => img.id === selectedImageId);
       if (selectedImage) {
         let newWidth = selectedImage.width;
@@ -893,6 +978,60 @@ const ImageEditor: React.FC = () => {
     link.download = `${filename}.png`;
     link.href = canvas.toDataURL();
     link.click();
+  };
+
+  // Get resize handles for selected text
+  const getTextResizeHandles = (
+    text: TextElement,
+    ctx: CanvasRenderingContext2D
+  ) => {
+    ctx.font = `${text.fontStyle} ${text.fontWeight} ${text.fontSize}px ${text.fontFamily}`;
+    const lines = text.content.split("\n");
+    const maxLineWidth = Math.max(
+      ...lines.map((line) => ctx.measureText(line).width)
+    );
+    const textHeight = text.fontSize * lines.length * 1.2;
+
+    let borderX = text.x;
+    if (text.textAlign === "center") {
+      borderX = text.x - maxLineWidth / 2;
+    } else if (text.textAlign === "right") {
+      borderX = text.x - maxLineWidth;
+    }
+
+    const textBounds = {
+      x: borderX - 5,
+      y: text.y - text.fontSize - 5,
+      width: maxLineWidth + 10,
+      height: textHeight + 10,
+    };
+
+    return [
+      {
+        name: "nw",
+        x: textBounds.x - 5,
+        y: textBounds.y - 5,
+        bounds: textBounds,
+      },
+      {
+        name: "ne",
+        x: textBounds.x + textBounds.width - 5,
+        y: textBounds.y - 5,
+        bounds: textBounds,
+      },
+      {
+        name: "sw",
+        x: textBounds.x - 5,
+        y: textBounds.y + textBounds.height - 5,
+        bounds: textBounds,
+      },
+      {
+        name: "se",
+        x: textBounds.x + textBounds.width - 5,
+        y: textBounds.y + textBounds.height - 5,
+        bounds: textBounds,
+      },
+    ];
   };
 
   // Effect to redraw canvas
@@ -1273,6 +1412,21 @@ const ImageEditor: React.FC = () => {
                 />
               </div>
 
+              {/* Image Dimensions Display */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Image Dimensions
+                </label>
+                <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                  <div className="text-center">
+                    <span className="text-2xl font-bold text-gray-800">
+                      {currentCanvasSize.width} × {currentCanvasSize.height}
+                    </span>
+                    <span className="text-sm text-gray-500 ml-2">pixels</span>
+                  </div>
+                </div>
+              </div>
+
               {/* File Format */}
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -1283,7 +1437,6 @@ const ImageEditor: React.FC = () => {
                   <option>JPG (Smaller Size)</option>
                 </select>
               </div>
-
               {/* Download Button */}
               <button
                 onClick={downloadImage}
@@ -1306,7 +1459,6 @@ const ImageEditor: React.FC = () => {
                   ref={fileInputRef}
                   className="hidden"
                 />
-                
 
                 <div className="flex gap-2 flex-col">
                   <button
@@ -1653,7 +1805,7 @@ const ImageEditor: React.FC = () => {
                     <input
                       type="range"
                       min="12"
-                      max="120"
+                      max="1000"
                       value={selectedText.fontSize}
                       onChange={(e) =>
                         updateText(selectedText.id, {

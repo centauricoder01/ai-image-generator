@@ -3,6 +3,7 @@
 import React, { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { removeBackground } from "@imgly/background-removal";
+// import { removeBackground } from "@imgly/background-removal-node";
 import { PlusIcon, ReloadIcon, DownloadIcon } from "@radix-ui/react-icons";
 import TextCustomizer from "@/components/editor/text-customizer";
 import Image from "next/image";
@@ -32,6 +33,8 @@ const Page = () => {
     if (file) {
       const imageUrl = URL.createObjectURL(file);
       setSelectedImage(imageUrl);
+      setIsImageSetupDone(false);
+      setRemovedBgImageUrl(null); // Add this line
       await setupImage(imageUrl);
     }
   };
@@ -102,28 +105,31 @@ const Page = () => {
       // Draw text sets behind the subject
       textSets.forEach((textSet) => {
         ctx.save();
-        ctx.font = `${textSet.fontWeight} ${textSet.fontSize * 10}px ${
+
+        // Calculate scale factor based on canvas vs preview size
+        const previewWidth = 1280; // approximate preview width in pixels
+        // In saveCompositeImage, replace the scale calculation and font line with:
+        const scale = canvas.width / 650; // Adjust 800 based on your needs
+
+        ctx.font = `${textSet.fontWeight} ${textSet.fontSize * scale}px ${
           textSet.fontFamily
         }`;
-        // ctx.font = `${textSet.fontWeight} ${textSet.fontSize * 1.25}px ${
-        //   textSet.fontFamily
-        // }`;
-
         ctx.fillStyle = textSet.color;
         ctx.globalAlpha = textSet.opacity;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
 
-        // Add shadow if specified
+        // Add shadow if specified (scaled)
         if (textSet.shadowSize > 0) {
           ctx.shadowColor = textSet.shadowColor;
-          ctx.shadowBlur = textSet.shadowSize;
-          ctx.shadowOffsetX = textSet.shadowSize / 2;
-          ctx.shadowOffsetY = textSet.shadowSize / 2;
+          ctx.shadowBlur = textSet.shadowSize * scale;
+          ctx.shadowOffsetX = (textSet.shadowSize / 2) * scale;
+          ctx.shadowOffsetY = (textSet.shadowSize / 2) * scale;
         }
 
-        const x = (canvas.width * (textSet.left + 55)) / 100;
-        const y = (canvas.height * (55 - textSet.top)) / 100;
+        // Use the same positioning as preview
+        const x = (canvas.width * (textSet.left + 50)) / 100;
+        const y = (canvas.height * (51 - textSet.top)) / 100;
 
         // Move the context to the text position and rotate
         ctx.translate(x, y);
@@ -184,7 +190,6 @@ const Page = () => {
               <PlusIcon className="mr-2 h-4 w-4" />
               Upload Image
             </Button>
-           
           </div>
         </div>
       </div>

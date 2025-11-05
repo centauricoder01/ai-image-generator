@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from "react";
 import {
-  
   Palette,
   Image,
   Type,
@@ -21,14 +20,12 @@ import {
 import Link from "next/link";
 import SamplePreview from "@/components/editor/canvas-preview";
 
-
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
 
 interface SampleData {
   id: string;
@@ -68,30 +65,27 @@ interface SampleData {
   createdAt: string;
 }
 
-
 const HomePage = () => {
-
   const [samples, setSamples] = useState<SampleData[]>([]);
-const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
 
+  useEffect(() => {
+    fetchSamples();
+  }, []);
 
-useEffect(() => {
-  fetchSamples();
-}, []);
-
-const fetchSamples = async () => {
-  try {
-    const response = await fetch("/api/sample");
-    const data = await response.json();
-    if (data.success) {
-      setSamples(data.data.slice(0, 6)); // Get only first 6 samples
+  const fetchSamples = async () => {
+    try {
+      const response = await fetch("/api/sample");
+      const data = await response.json();
+      if (data.success) {
+        setSamples(data.data.slice(0, 6)); // Get only first 6 samples
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
-  } catch (err) {
-    console.error(err);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   const contentTypes = [
     {
@@ -277,6 +271,13 @@ const fetchSamples = async () => {
                 Text behind Image
               </Link>
 
+              <Link
+                href="/flow-builder"
+                className="text-gray-600 hover:text-gray-900 transition-colors font-medium"
+              >
+                Flow Builder
+              </Link>
+
               <DropdownMenu>
                 <DropdownMenuTrigger>
                   <a className="text-gray-600 hover:text-gray-900 transition-colors font-medium">
@@ -421,33 +422,33 @@ const fetchSamples = async () => {
         </div>
       </section>
 
+      {/* Samples Gallery Section */}
+      <section className="container mx-auto px-6 py-20">
+        <div className="text-center mb-16">
+          <h2 className="text-4xl md:text-5xl font-bold text-gray-800 mb-6">
+            Recent Designs
+          </h2>
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            Get inspired by designs created with ImageCraft
+          </p>
+        </div>
 
-{/* Samples Gallery Section */}
-<section className="container mx-auto px-6 py-20">
-  <div className="text-center mb-16">
-    <h2 className="text-4xl md:text-5xl font-bold text-gray-800 mb-6">
-      Recent Designs
-    </h2>
-    <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-      Get inspired by designs created with ImageCraft
-    </p>
-  </div>
-
-  {loading ? (
-    <div className="text-center">Loading samples...</div>
-  ) : (
-    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {samples.map((sample) => (
-        <SamplePreview
-          key={sample.id}
-          sample={sample}
-          onClick={() => handleNavigation(`/image-text-generator?sample=${sample.id}`)}
-        />
-      ))}
-    </div>
-  )}
-
-</section>
+        {loading ? (
+          <div className="text-center">Loading samples...</div>
+        ) : (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {samples.map((sample) => (
+              <SamplePreview
+                key={sample.id}
+                sample={sample}
+                onClick={() =>
+                  handleNavigation(`/image-text-generator?sample=${sample.id}`)
+                }
+              />
+            ))}
+          </div>
+        )}
+      </section>
 
       {/* Content Types Section */}
       <section id="templates" className="container mx-auto px-6 py-20">
@@ -625,6 +626,14 @@ const fetchSamples = async () => {
                     className="hover:text-sky-400 transition-colors"
                   >
                     Text Behind Image Generator
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/flow-builder"
+                    className="hover:text-sky-400 transition-colors"
+                  >
+                    Flow Builder
                   </Link>
                 </li>
               </ul>

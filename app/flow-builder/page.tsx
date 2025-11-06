@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
+
 import {
   ReactFlow,
   applyNodeChanges,
@@ -19,7 +20,7 @@ import type {
   Connection,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { MessageCircle } from "lucide-react";
+import { MessageCircle, Type } from "lucide-react";
 import type { MessageNodeData } from "../../types/types";
 import { Modal } from "../../components/Model";
 import { ContentEditor } from "../../components/ConentEditor";
@@ -47,6 +48,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import Link from "next/link";
+import { CustomEdge } from "@/components/CoustomEdge";
+import { HeadingNode } from "@/components/HeadingNode";
 
 const contentTypes = [
   {
@@ -194,8 +197,35 @@ const DraggableMessageNode = () => {
   );
 };
 
+const DraggableHeadingNode = () => {
+  const onDragStart = (event: React.DragEvent, nodeType: string) => {
+    event.dataTransfer.setData("application/reactflow", nodeType);
+    event.dataTransfer.effectAllowed = "move";
+  };
+
+  return (
+    <div
+      className="w-full bg-yellow-100 border-2 border-yellow-200 rounded-lg p-3 hover:bg-yellow-200 transition-colors cursor-grab active:cursor-grabbing"
+      onDragStart={(event) => onDragStart(event, "headingNode")}
+      draggable
+    >
+      <div className="flex items-center gap-2 justify-center">
+        <Type size={16} className="text-yellow-700" />
+        <span className="text-sm font-medium text-yellow-800">
+          Drag Heading Node
+        </span>
+      </div>
+    </div>
+  );
+};
+
 const nodeTypes = {
   messageNode: MessageNode,
+  headingNode: HeadingNode,
+};
+
+const edgeTypes = {
+  default: CustomEdge,
 };
 
 const initialNodes: Node[] = [
@@ -259,6 +289,7 @@ function FlowComponent() {
       source: params.source!,
       target: params.target!,
       style: { stroke: "#94a3b8", strokeWidth: 2 },
+      label: "", // Start with empty label
       markerEnd: {
         type: "arrowclosed",
         color: "#94a3b8",
@@ -374,12 +405,16 @@ function FlowComponent() {
         position: snappedPosition,
         data: {
           message: "",
-          contentType: "text" as const,
+          contentType: type === "headingNode" ? "heading" : ("text" as const), // Add this condition
+          fontSize: type === "headingNode" ? 24 : undefined,
           onDelete: deleteNode,
           onMessageChange: updateNodeMessage,
           onContentTypeChange: updateNodeContentType,
           onNodeClick: handleNodeClick,
         },
+        ...(type === "headingNode" && {
+          connectable: false,
+        }),
       };
 
       setNodes((nds) => nds.concat(newNode));
@@ -449,6 +484,33 @@ function FlowComponent() {
       });
 
       // Create edges with enhanced styling for complex flows
+      //   const newEdges: Edge[] = flowData.edges.map(
+      //     (edgeData: any, index: number) => {
+      //       const sourceEdges = flowData.edges.filter(
+      //         (e: any) => e.source === edgeData.source
+      //       );
+      //       const isBranching = sourceEdges.length > 1;
+
+      //       return {
+      //         id: edgeData.id || `${edgeData.source}-${edgeData.target}-${index}`,
+      //         source: edgeData.source,
+      //         target: edgeData.target,
+      //         type: edgeData.type || "default",
+      //         animated: edgeData.animated || false,
+      //         style: {
+      //           stroke: isBranching ? "#3b82f6" : "#94a3b8",
+      //           strokeWidth: isBranching ? 2.5 : 2,
+      //         },
+      //         markerEnd: {
+      //           type: "arrowclosed",
+      //           color: isBranching ? "#3b82f6" : "#94a3b8",
+      //         },
+      //         label: edgeData.label || "",
+      //       };
+      //     }
+      //   );
+
+      // Create edges with enhanced styling for complex flows
       const newEdges: Edge[] = flowData.edges.map(
         (edgeData: any, index: number) => {
           const sourceEdges = flowData.edges.filter(
@@ -470,7 +532,11 @@ function FlowComponent() {
               type: "arrowclosed",
               color: isBranching ? "#3b82f6" : "#94a3b8",
             },
-            label: edgeData.label || "",
+            label: edgeData.label || "", // MAKE SURE THIS IS HERE
+            data: {
+              // ADD THIS
+              updateEdgeLabel: updateEdgeLabel,
+            },
           };
         }
       );
@@ -613,6 +679,20 @@ function FlowComponent() {
     );
   };
 
+  const updateEdgeLabel = useCallback((edgeId: string, label: string) => {
+    setEdges((edges) =>
+      edges.map((edge) => (edge.id === edgeId ? { ...edge, label } : edge))
+    );
+  }, []);
+
+  const edgesWithFunctions = edges.map((edge) => ({
+    ...edge,
+    data: {
+      ...edge.data,
+      updateEdgeLabel,
+    },
+  }));
+
   const clearAll = () => {
     setNodes([]);
     setEdges([]);
@@ -625,7 +705,8 @@ function FlowComponent() {
       <div className="w-4/5 h-full relative" ref={reactFlowWrapper}>
         <ReactFlow
           nodes={nodesWithFunctions}
-          edges={edges}
+          //   edges={edges}
+          edges={edgesWithFunctions}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
@@ -633,6 +714,7 @@ function FlowComponent() {
           onDrop={onDrop}
           onDragOver={onDragOver}
           nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
           fitView
           className="bg-gray-50"
         >
@@ -661,9 +743,13 @@ function FlowComponent() {
           </button>
 
           {/* Nodes Panel */}
+
           <div className="mb-6">
             <div className="text-sm text-gray-600 mb-2">Drag to add nodes:</div>
             <DraggableMessageNode />
+            <div className="mt-2">
+              <DraggableHeadingNode />
+            </div>
           </div>
 
           {/* Content Editor */}
@@ -722,13 +808,6 @@ export default function App() {
             </div>
 
             <div className="hidden md:flex items-center space-x-8">
-              <a
-                href="#tools"
-                className="text-gray-600 hover:text-gray-900 transition-colors font-medium"
-              >
-                Tools
-              </a>
-
               <Link
                 href="/text-behind-image"
                 className="text-gray-600 hover:text-gray-900 transition-colors font-medium"
@@ -746,7 +825,7 @@ export default function App() {
               <DropdownMenu>
                 <DropdownMenuTrigger>
                   <a className="text-gray-600 hover:text-gray-900 transition-colors font-medium">
-                    Content types
+                    Custom image generator
                   </a>
                 </DropdownMenuTrigger>
 
@@ -760,18 +839,11 @@ export default function App() {
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
-              <Link
-                href="image-text-generator"
-                className="text-gray-600 hover:text-gray-900 transition-colors font-medium"
-              >
-                <button className="bg-gradient-to-r from-sky-500 to-indigo-600 text-white px-6 py-2 rounded-lg font-medium hover:shadow-lg transition-all transform hover:scale-105">
-                  Get Started
-                </button>
-              </Link>
             </div>
           </div>
         </div>
       </nav>
+
       <ReactFlowProvider>
         <FlowComponent />
       </ReactFlowProvider>

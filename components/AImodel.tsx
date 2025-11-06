@@ -28,7 +28,8 @@ export const AIGenerateModal: React.FC<AIGenerateModalProps> = ({
     setError(null);
 
     try {
-      const response = await fetch("http://localhost:3000/api/flow-builder", {
+      // const response = await fetch("http://localhost:3000/api/flow-builder", {
+      const response = await fetch("http://3.7.156.63:3001/api/flow-builder", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

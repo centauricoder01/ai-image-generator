@@ -30,19 +30,23 @@ export const ContentEditor = ({
   ]);
 
   const [inputValue, setInputValue] = useState("");
-  const [selectedType, setSelectedType] = useState<"text" | "image" | "video">(
-    "text"
-  );
+  const [selectedType, setSelectedType] = useState<
+    "text" | "image" | "video" | "heading"
+  >("text");
 
   const selectedNode = selectedNodeId
     ? nodes.find((node) => node.id === selectedNodeId)
     : null;
+
   React.useEffect(() => {
     if (selectedNode) {
       const nodeData = selectedNode.data as unknown as MessageNodeData;
       setSelectedType(nodeData.contentType || "text");
 
       switch (nodeData.contentType) {
+        case "heading":
+          setInputValue(nodeData.message || "");
+          break;
         case "text":
           if (nodeData.textEntries && nodeData.textEntries.length > 0) {
             setTextEntries(nodeData.textEntries);
@@ -66,9 +70,13 @@ export const ContentEditor = ({
     const additionalData: any = {};
 
     switch (selectedType) {
+      case "heading":
+        additionalData.message = inputValue;
+        additionalData.fontSize =
+          (selectedNode?.data as unknown as MessageNodeData)?.fontSize || 24;
+        break;
       case "text":
         additionalData.textEntries = textEntries;
-        // Also keep backwards compatibility
         additionalData.message = textEntries
           .map((e) => `${e.label}: ${e.value}`)
           .join("\n");
@@ -150,52 +158,69 @@ export const ContentEditor = ({
         </button>
       </div>
 
-      {/* Content Type Selection */}
-      <div className="space-y-2">
-        <label className="text-sm font-medium text-gray-700">
-          Content Type
-        </label>
-        <div className="grid grid-cols-1 gap-2">
-          {contentTypes.map(({ type, icon: Icon, label }) => (
-            <button
-              key={type}
-              onClick={() => setSelectedType(type as any)}
-              className={`flex items-center gap-2 p-2 rounded border text-left transition-colors ${
-                selectedType === type
-                  ? "bg-blue-50 border-blue-300 text-blue-700"
-                  : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50"
-              }`}
-            >
-              <Icon size={16} />
-              <span className="text-sm">{label}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Content Input */}
-      {/* <div className="space-y-2">
-        <label className="text-sm font-medium text-gray-700">
-          {selectedType === "text" ? "Message" : "Content"}
-        </label>
-        {selectedType === "text" ? (
-          <textarea
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            placeholder={getPlaceholder()}
-            className="w-full p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            rows={4}
-          />
-        ) : (
-          <input
-            type="text"
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            placeholder={getPlaceholder()}
-            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          />
+      {/* // Add this right after the header div */}
+      {selectedNode &&
+        (selectedNode.data as unknown as MessageNodeData).contentType ===
+          "heading" && (
+          <div className="space-y-3 mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium text-gray-700">
+                Font Size
+              </label>
+              <span className="text-sm font-semibold text-gray-800">
+                {(selectedNode.data as unknown as MessageNodeData).fontSize ||
+                  24}
+                px
+              </span>
+            </div>
+            <input
+              type="range"
+              min="16"
+              max="48"
+              value={
+                (selectedNode.data as unknown as MessageNodeData).fontSize || 24
+              }
+              onChange={(e) => {
+                const newSize = Number(e.target.value);
+                const currentMessage =
+                  (selectedNode.data as unknown as MessageNodeData).message ||
+                  "";
+                onContentTypeChange(selectedNodeId!, "heading", {
+                  fontSize: newSize,
+                  message: currentMessage, // Keep the existing message
+                });
+              }}
+              className="w-full"
+            />
+          </div>
         )}
-      </div> */}
+
+      {/* Content Type Selection - Hide for heading nodes */}
+      {selectedNode &&
+        (selectedNode.data as unknown as MessageNodeData).contentType !==
+          "heading" && (
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700">
+              Content Type
+            </label>
+            <div className="grid grid-cols-1 gap-2">
+              {contentTypes.map(({ type, icon: Icon, label }) => (
+                <button
+                  key={type}
+                  onClick={() => setSelectedType(type as any)}
+                  className={`flex items-center gap-2 p-2 rounded border text-left transition-colors ${
+                    selectedType === type
+                      ? "bg-blue-50 border-blue-300 text-blue-700"
+                      : "bg-white border-gray-200 text-gray-700 hover:bg-gray-50"
+                  }`}
+                >
+                  <Icon size={16} />
+                  <span className="text-sm">{label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
       {/* Content Input */}
       <div className="space-y-2">
@@ -332,6 +357,15 @@ export const ContentEditor = ({
             onChange={(e) => setInputValue(e.target.value)}
             placeholder={getPlaceholder()}
             className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+        ) : selectedType === "heading" ? (
+          // Simple input for heading
+          <input
+            type="text"
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            placeholder="Enter heading text..."
+            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
           />
         ) : null}
       </div>

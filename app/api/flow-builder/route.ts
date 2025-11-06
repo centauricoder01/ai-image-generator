@@ -19,12 +19,15 @@ interface Node {
   contentType: string;
   position: { x: number; y: number };
   textEntries: TextEntry[];
+
   message?: string;
 }
 
 interface Edge {
   source: string;
   target: string;
+  label?: string;
+  id?: string;
 }
 
 interface FlowData {
@@ -64,9 +67,15 @@ Your response must be a JSON object with this exact structure:
     }
   ],
   "edges": [
-    {
+   {
       "source": "1",
-      "target": "2"
+      "target": "2",
+      "label": "Next Step"  // Eg:  setting payment method, Adding Database
+    },
+    {
+      "source": "2",
+      "target": "3",
+      "label": "If Valid" // we have to explain a little about next step in lable, only 3-5 words.
     }
   ]
 }
@@ -108,6 +117,17 @@ ADVANCED RULES for Complex Flows:
    - Horizontal spacing: 350-400px between nodes
    - Vertical spacing: 200px for different branches
 4. Return ONLY the JSON object
+
+
+EDGE LABEL RULES:
+1. Each edge should have a descriptive label explaining the transition
+2. Common label patterns:
+   - Action flows: "Submit", "Next", "Continue", "Process"
+   - Decision flows: "If Yes", "If No", "If Valid", "If Error"
+   - Data flows: "Send Data", "Receive Response", "Update"
+   - Time-based: "After 24h", "Immediately", "On Schedule"
+3. Keep labels short (1-4 words)
+4. Labels should clarify WHY the connection exists
 
 Example for a detailed node:
 {
@@ -240,35 +260,24 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (!process.env.GEMINI_API_KEY) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Gemini API key not configured",
-        },
-        { status: 500 }
-      );
-    }
-
     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
     // Enhanced prompt with complexity analysis
     const fullPrompt = `${SYSTEM_PROMPT}
 
-User Request: ${prompt}
+    User Request: ${prompt}
 
-Analyze the complexity and create DETAILED nodes:
-- If simple (basic form, 2-3 steps) → create 3-5 nodes with 2-3 textEntries each
-- If moderate (multiple inputs, validation) → create 6-10 nodes with 3-4 textEntries each
-- If complex (multi-stage process, branching logic) → create 10-20 nodes with 4-5 textEntries each
+    Analyze the complexity and create DETAILED nodes with LABELED EDGES:
+    - If simple (basic form, 2-3 steps) → create 3-5 nodes with 2-3 textEntries each and descriptive edge labels
+    - If moderate (multiple inputs, validation) → create 6-10 nodes with 3-4 textEntries each and specific edge labels
+    - If complex (multi-stage process, branching logic) → create 10-20 nodes with 4-5 textEntries each and detailed edge labels
 
-For each node, provide comprehensive information using textEntries:
-- Main heading/title in first entry
-- Detailed description in second entry
-- Specific instructions/requirements in additional entries
-- Include validation rules, error messages, or success criteria where relevant
+    For edges, always include labels that explain the relationship:
+    - Linear flows: "Next", "Then", "Continue"
+    - Branching: "If Yes", "If No", "Success", "Error"
+    - Parallel: "Also", "Meanwhile", "Simultaneously"
 
-Generate the detailed flow JSON:`;
+    Generate the detailed flow JSON with labeled edges:`;
 
     const result = await model.generateContent(fullPrompt);
     const response = await result.response;
@@ -377,12 +386,22 @@ Generate the detailed flow JSON:`;
     }
 
     // Validate edges reference existing nodes
-    const nodeIds = new Set(flowData.nodes.map((n) => n.id));
-    flowData.edges = flowData.edges.filter(
-      (edge) => nodeIds.has(edge.source) && nodeIds.has(edge.target)
-    );
+    // const nodeIds = new Set(flowData.nodes.map((n) => n.id));
+    // flowData.edges = flowData.edges.filter(
+    //   (edge) => nodeIds.has(edge.source) && nodeIds.has(edge.target)
+    // );
 
-    console.log("Generated complex flow:", JSON.stringify(flowData, null, 2));
+    const nodeIds = new Set(flowData.nodes.map((n) => n.id));
+    flowData.edges = flowData.edges
+      .filter((edge) => nodeIds.has(edge.source) && nodeIds.has(edge.target))
+      .map((edge) => ({
+        source: edge.source,
+        target: edge.target,
+        label: edge.label || "", // Ensure label is included
+        id: `${edge.source}-${edge.target}`, // Add explicit ID
+      }));
+
+    // console.log("Generated complex flow:", JSON.stringify(flowData, null, 2));
 
     return NextResponse.json({
       success: true,

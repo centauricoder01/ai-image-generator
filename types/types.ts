@@ -5,11 +5,11 @@ export interface TextEntry {
   valueType?: "text" | "image" | "video"; // Add this to track the type of value
 }
 
-
 export interface MessageNodeData {
   message: string;
-  contentType: "text" | "image" | "video";
+  contentType: "text" | "image" | "video" | "heading";
   imageUrl?: string;
+  fontSize : number;
   videoUrl?: string;
   onDelete: (id: string) => void;
   textEntries?: TextEntry[];
@@ -20,6 +20,17 @@ export interface MessageNodeData {
     additionalData?: any
   ) => void;
   onNodeClick: (id: string) => void;
+}
+
+export interface HeadingNodeProps {
+  data: {
+    fontSize?: number;
+    contentType: "text" | "image" | "video";
+    onDelete: (id: string) => void;
+    onNodeClick: (id: string) => void;
+    message?: string;
+  };
+  id: string;
 }
 
 export interface MessageNodeProps {

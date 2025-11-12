@@ -73,3 +73,28 @@ export const isPointInElement = (
     point.y <= element.y + element.height
   );
 };
+
+export const copyToClipboard = (text: string) => {
+  if (navigator?.clipboard && window.isSecureContext) {
+    // ✅ Modern way (works in HTTPS or localhost)
+    return navigator.clipboard.writeText(text);
+  } else {
+    // ⚙️ Fallback for HTTP or older browsers
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    // Move textarea off-screen
+    textArea.style.position = "fixed";
+    textArea.style.left = "-999999px";
+    textArea.style.top = "-999999px";
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    try {
+      document.execCommand("copy"); // 👈 old method
+      console.log("Copied to clipboard using fallback");
+    } catch (err) {
+      console.error("Fallback copy failed:", err);
+    }
+    document.body.removeChild(textArea);
+  }
+};

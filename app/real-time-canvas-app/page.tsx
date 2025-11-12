@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import React, { useState, useRef, useEffect } from "react";
 import type {
@@ -11,7 +11,7 @@ import type {
   TextElement,
   Tool,
 } from "../../types/types";
-import { generateId, isPointInElement } from "../../lib/utils";
+import { copyToClipboard, generateId, isPointInElement } from "../../lib/utils";
 import { useCollaboration } from "../../hooks/UseCollaboration";
 
 // Import your existing components
@@ -124,8 +124,7 @@ const Canvas: React.FC = () => {
 
   // Create shareable room
   const handleCreateRoom = async () => {
-
-    console.log("Yes, i came here", )
+    console.log("Yes, i came here");
     try {
       const response = await fetch(`http://3.7.156.63:3002/api/rooms/create`, {
         method: "POST",
@@ -664,7 +663,8 @@ const Canvas: React.FC = () => {
                 onClick={async () => {
                   const url = await handleGenerateInviteLink("collaborator");
                   if (url) {
-                    navigator.clipboard.writeText(url);
+                    // navigator.clipboard.writeText(url);
+                    await copyToClipboard(url);
                     alert("Collaborator link copied to clipboard!");
                   }
                 }}
@@ -684,7 +684,8 @@ const Canvas: React.FC = () => {
                 onClick={async () => {
                   const url = await handleGenerateInviteLink("viewer");
                   if (url) {
-                    navigator.clipboard.writeText(url);
+                    // navigator.clipboard.writeText(url);
+                    await copyToClipboard(url);
                     alert("Viewer link copied to clipboard!");
                   }
                 }}

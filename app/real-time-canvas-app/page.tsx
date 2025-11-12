@@ -127,7 +127,7 @@ const Canvas: React.FC = () => {
 
     console.log("Yes, i came here", )
     try {
-      const response = await fetch(`http://localhost:3002/api/rooms/create`, {
+      const response = await fetch(`http://3.7.156.63:3002/api/rooms/create`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
       });
@@ -159,7 +159,7 @@ const Canvas: React.FC = () => {
 
     try {
       const response = await fetch(
-        `http://localhost:3002/api/rooms/${roomId}/invite`,
+        `http://3.7.156.63:3002/api/rooms/${roomId}/invite`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

@@ -49,7 +49,7 @@ export const useCollaboration = ({
   useEffect(() => {
     if (!roomId) return;
 
-    const socket = io(`http://localhost:3002`, {
+    const socket = io(`http://3.7.156.63:3002`, {
       transports: ["websocket", "polling"],
     });
 

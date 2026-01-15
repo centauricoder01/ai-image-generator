@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, {
+  useState,
+  useRef,
+  useEffect,
+  useCallback,
+  Suspense,
+} from "react";
 import {
   Type,
   Download,
@@ -16,6 +22,7 @@ import {
   Smartphone,
   Image as ImageIcon,
   Layers,
+  ChevronDown,
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 
@@ -321,7 +328,7 @@ const contentTypes = [
 
 type PresetKey = keyof typeof presetSizes;
 
-const ImageEditor: React.FC = () => {
+const ImageEditorContent: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [images, setImages] = useState<ImageElement[]>([]);
@@ -1312,7 +1319,7 @@ const ImageEditor: React.FC = () => {
             </div>
 
             <div className="hidden md:flex items-center space-x-8">
-              <a
+              {/* <a
                 href="#tools"
                 className="text-gray-600 hover:text-gray-900 transition-colors font-medium"
               >
@@ -1357,13 +1364,57 @@ const ImageEditor: React.FC = () => {
                 <button className="bg-gradient-to-r from-sky-500 to-indigo-600 text-white px-6 py-2 rounded-lg font-medium hover:shadow-lg transition-all transform hover:scale-105">
                   Get Started
                 </button>
+              </Link> */}
+
+                <Link
+                href="/text-behind-image"
+                className="text-gray-600 hover:text-gray-900 transition-colors font-medium"
+              >
+                Text behind Image
               </Link>
+
+              <Link
+                href="/flow-builder"
+                className="text-gray-600 hover:text-gray-900 transition-colors font-medium"
+              >
+                Flow Builder
+              </Link>
+
+              <Link
+                href="/real-time-canvas-app"
+                className="text-gray-600 hover:text-gray-900 transition-colors font-medium"
+              >
+                Canvas Colobrator
+              </Link>
+
+              <Link
+                href="/image-text-generator"
+                className="text-gray-600 hover:text-gray-900 transition-colors font-medium"
+              >
+                Image Generator
+              </Link>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger>
+                  <a className="text-gray-600 hover:text-gray-900 transition-colors font-medium flex justify-center items-center gap-2">
+                    Custom image generator <ChevronDown />
+                  </a>
+                </DropdownMenuTrigger>
+
+                <DropdownMenuContent>
+                  {contentTypes.map((item) => (
+                    <Link key={item.id} href={item.href} passHref>
+                      <DropdownMenuItem className="cursor-pointer">
+                        {item.title}
+                      </DropdownMenuItem>
+                    </Link>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </div>
       </nav>{" "}
-
-
       <div className="h-screen bg-gray-50 flex overflow-hidden">
         {/* Left Panel - Preview */}
         <div className="flex-1 p-6 overflow-hidden">
@@ -2281,4 +2332,21 @@ const ImageEditor: React.FC = () => {
   );
 };
 
-export default ImageEditor;
+// export default ImageEditor;
+
+export default function ImageEditor() {
+  return (
+    <Suspense
+      fallback={
+        <div className="h-screen bg-gray-50 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-500 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading editor...</p>
+          </div>
+        </div>
+      }
+    >
+      <ImageEditorContent />
+    </Suspense>
+  );
+}

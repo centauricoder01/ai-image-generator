@@ -95,7 +95,7 @@ export const MessageNode: React.FC<MessageNodeProps> = ({ data, id }) => {
               </div>
 
               {/* Divider between entries */}
-              {index < data.textEntries.length - 1 && (
+              {data.textEntries && index < data.textEntries.length - 1 && (
                 <div className="border-t border-gray-300 mt-3"></div>
               )}
             </div>

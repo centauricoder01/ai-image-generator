@@ -18,6 +18,7 @@ import {
   Layers,
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 
 interface TextElement {
   id: number;
@@ -178,7 +179,7 @@ const presetSizes = {
 
 type PresetKey = keyof typeof presetSizes;
 
-const ImageEditor: React.FC = () => {
+const ImageEditorContent: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [images, setImages] = useState<ImageElement[]>([]);
@@ -252,7 +253,7 @@ const ImageEditor: React.FC = () => {
         `${presetInfo.label.replace(/[^a-zA-Z0-9]/g, "_")}_${timestamp}`
       );
     }
-  }, []);
+  }, [searchParams]);
 
   // const currentCanvasSize = canvasSizes[canvasSize];
   const currentCanvasSize = currentPreset
@@ -1519,7 +1520,9 @@ const ImageEditor: React.FC = () => {
                     <textarea
                       value={selectedText.content}
                       onChange={(e) =>
-                        updateText(selectedText.id, { content: e.target.value })
+                        updateText(selectedText.id, {
+                          content: e.target.value,
+                        })
                       }
                       className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
                       rows={3}
@@ -1721,8 +1724,14 @@ const ImageEditor: React.FC = () => {
 
               <div className="space-y-2">
                 {[
-                  ...images.map((img) => ({ ...img, type: "image" as const })),
-                  ...texts.map((text) => ({ ...text, type: "text" as const })),
+                  ...images.map((img) => ({
+                    ...img,
+                    type: "image" as const,
+                  })),
+                  ...texts.map((text) => ({
+                    ...text,
+                    type: "text" as const,
+                  })),
                 ]
                   .sort((a, b) => (b.zIndex || 0) - (a.zIndex || 0))
                   .map((element) => (
@@ -1859,4 +1868,19 @@ const ImageEditor: React.FC = () => {
   );
 };
 
-export default ImageEditor;
+export default function ImageEditor() {
+  return (
+    <Suspense
+      fallback={
+        <div className="h-screen bg-gray-50 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-500 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading editor...</p>
+          </div>
+        </div>
+      }
+    >
+      <ImageEditorContent />
+    </Suspense>
+  );
+}

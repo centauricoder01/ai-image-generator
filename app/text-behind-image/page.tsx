@@ -22,6 +22,7 @@ import {
   Presentation,
   FileText,
   Sparkles,
+  ChevronDown,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -186,9 +187,14 @@ const Page = () => {
   };
 
   const setupImage = async (imageUrl: string) => {
+
+    console.log("Hello world, I am from Remove bg")
     try {
       const imageBlob = await removeBackground(imageUrl);
+
+      console.log(imageBlob, "imageBlob")
       const url = URL.createObjectURL(imageBlob);
+      console.log(url, "url")
       setRemovedBgImageUrl(url);
       setIsImageSetupDone(true);
     } catch (error) {
@@ -324,7 +330,7 @@ const Page = () => {
             </div>
 
             <div className="hidden md:flex items-center space-x-8">
-              <a
+              {/* <a
                 href="#tools"
                 className="text-gray-600 hover:text-gray-900 transition-colors font-medium"
               >
@@ -369,7 +375,53 @@ const Page = () => {
                 <button className="bg-gradient-to-r from-sky-500 to-indigo-600 text-white px-6 py-2 rounded-lg font-medium hover:shadow-lg transition-all transform hover:scale-105">
                   Get Started
                 </button>
+              </Link> */}
+
+              <Link
+                href="/text-behind-image"
+                className="text-gray-600 hover:text-gray-900 transition-colors font-medium"
+              >
+                Text behind Image
               </Link>
+
+              <Link
+                href="/flow-builder"
+                className="text-gray-600 hover:text-gray-900 transition-colors font-medium"
+              >
+                Flow Builder
+              </Link>
+
+              <Link
+                href="/real-time-canvas-app"
+                className="text-gray-600 hover:text-gray-900 transition-colors font-medium"
+              >
+                Canvas Colobrator
+              </Link>
+
+              <Link
+                href="/image-text-generator"
+                className="text-gray-600 hover:text-gray-900 transition-colors font-medium"
+              >
+                Image Generator
+              </Link>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger>
+                  <a className="text-gray-600 hover:text-gray-900 transition-colors font-medium flex justify-center items-center gap-2">
+                    Custom image generator <ChevronDown />
+                  </a>
+                </DropdownMenuTrigger>
+
+                <DropdownMenuContent>
+                  {contentTypes.map((item) => (
+                    <Link key={item.id} href={item.href} passHref>
+                      <DropdownMenuItem className="cursor-pointer">
+                        {item.title}
+                      </DropdownMenuItem>
+                    </Link>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </div>

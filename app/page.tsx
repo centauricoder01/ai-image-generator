@@ -257,12 +257,12 @@ const HomePage = () => {
             </div>
 
             <div className="hidden md:flex items-center space-x-8">
-              <a
+              {/* <a
                 href="#tools"
                 className="text-gray-600 hover:text-gray-900 transition-colors font-medium"
               >
                 Tools
-              </a>
+              </a> */}
 
               <Link
                 href="/text-behind-image"
@@ -278,7 +278,21 @@ const HomePage = () => {
                 Flow Builder
               </Link>
 
-              <DropdownMenu>
+              <Link
+                href="/real-time-canvas-app"
+                className="text-gray-600 hover:text-gray-900 transition-colors font-medium"
+              >
+                Canvas Colobrator
+              </Link>
+
+              <Link
+                href="/image-text-generator"
+                className="text-gray-600 hover:text-gray-900 transition-colors font-medium"
+              >
+                Banner Generator
+              </Link>
+
+              {/* <DropdownMenu>
                 <DropdownMenuTrigger>
                   <a className="text-gray-600 hover:text-gray-900 transition-colors font-medium">
                     Content types
@@ -302,7 +316,7 @@ const HomePage = () => {
                 <button className="bg-gradient-to-r from-sky-500 to-indigo-600 text-white px-6 py-2 rounded-lg font-medium hover:shadow-lg transition-all transform hover:scale-105">
                   Get Started
                 </button>
-              </Link>
+              </Link> */}
             </div>
           </div>
         </div>

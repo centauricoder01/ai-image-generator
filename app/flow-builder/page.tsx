@@ -20,7 +20,7 @@ import type {
   Connection,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { MessageCircle, Type } from "lucide-react";
+import { ChevronDown, MessageCircle, Type } from "lucide-react";
 import type { MessageNodeData } from "../../types/types";
 import { Modal } from "../../components/Model";
 import { ContentEditor } from "../../components/ConentEditor";
@@ -549,7 +549,12 @@ function FlowComponent() {
 
       // Count total text entries across all nodes
       const totalEntries = newNodes.reduce((sum, node) => {
-        return sum + (node.data.textEntries?.length || 0);
+        return (
+          sum +
+          (Array.isArray(node.data.textEntries)
+            ? node.data.textEntries.length
+            : 0)
+        );
       }, 0);
 
       const complexity =
@@ -822,10 +827,24 @@ export default function App() {
                 Flow Builder
               </Link>
 
+              <Link
+                href="/real-time-canvas-app"
+                className="text-gray-600 hover:text-gray-900 transition-colors font-medium"
+              >
+                Canvas Colobrator
+              </Link>
+
+              <Link
+                href="/image-text-generator"
+                className="text-gray-600 hover:text-gray-900 transition-colors font-medium"
+              >
+                Image Generator
+              </Link>
+
               <DropdownMenu>
                 <DropdownMenuTrigger>
-                  <a className="text-gray-600 hover:text-gray-900 transition-colors font-medium">
-                    Custom image generator
+                  <a className="text-gray-600 hover:text-gray-900 transition-colors font-medium flex justify-center items-center gap-2">
+                    Custom image generator <ChevronDown />
                   </a>
                 </DropdownMenuTrigger>
 

@@ -11,7 +11,7 @@ import type {
   TextElement,
   Tool,
 } from "../../types/types";
-import { copyToClipboard, generateId, isPointInElement } from "../../lib/utils";
+import { generateId, isPointInElement } from "../../utils/func";
 import { useCollaboration } from "../../hooks/UseCollaboration";
 
 // Import your existing components
@@ -24,12 +24,13 @@ import { ZoomControls } from "../../components/canvas-component/ZoomController";
 import { ImageBox } from "../../components/canvas-component/ImageBox ";
 import { Arrow } from "../../components/canvas-component/Arrow";
 import { LayerControls } from "../../components/canvas-component/LayerControls";
+import { SheetTabs } from "../../components/canvas-component/SheetTabs";
 
 const Canvas: React.FC = () => {
   const [elements, setElements] = useState<CanvasElement[]>([]);
   const [selectedTool, setSelectedTool] = useState<Tool>("select");
   const [selectedElementId, setSelectedElementId] = useState<string | null>(
-    null
+    null,
   );
   const [editingTextId, setEditingTextId] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -70,6 +71,228 @@ const Canvas: React.FC = () => {
   const [generatingInvite, setGeneratingInvite] = useState(false);
   const [sessionToken, setSessionToken] = useState<string | null>(null);
 
+  // changeing the color after selecting the element
+  const [selectedElementColors, setSelectedElementColors] = useState<{
+    fillColor: string;
+    borderColor: string;
+    borderWidth: number;
+  } | null>(null);
+
+  // Multiple sheet embedding
+  const [sheets, setSheets] = useState<{
+    [key: string]: {
+      elements: CanvasElement[];
+      name: string;
+    };
+  }>({
+    "sheet-1": { elements: [], name: "Sheet 1" },
+  });
+
+  const [activeSheetId, setActiveSheetId] = useState<string>("sheet-1");
+  const [sheetOrder, setSheetOrder] = useState<string[]>(["sheet-1"]);
+
+  // Add effect to save current sheet when switching
+  useEffect(() => {
+    // Don't update if sheets don't have the active sheet yet
+    if (!sheets[activeSheetId]) return;
+
+    setSheets((prev) => ({
+      ...prev,
+      [activeSheetId]: {
+        ...prev[activeSheetId],
+        elements: elements,
+      },
+    }));
+  }, [elements, activeSheetId]);
+
+  useEffect(() => {
+    if (sheets[activeSheetId]) {
+      setElements(sheets[activeSheetId].elements);
+    }
+  }, [activeSheetId]);
+
+  const handleSheetChange = (sheetId: string) => {
+    // Save current sheet's elements
+    setSheets((prev) => ({
+      ...prev,
+      [activeSheetId]: {
+        ...prev[activeSheetId],
+        elements: elements,
+      },
+    }));
+
+    // Load new sheet's elements
+    setActiveSheetId(sheetId);
+    setElements(sheets[sheetId].elements);
+    setSelectedElementId(null);
+    setEditingTextId(null);
+
+    // Emit sheet switch to collaborators
+    emitSheetSwitch(sheetId);
+  };
+
+  const handleCreateSheet = () => {
+    // Allow sheet creation even without collaboration
+    if (userRole === "viewer") {
+      alert("You don't have permission to create sheets");
+      return;
+    }
+
+    const newSheetId = `sheet-${Date.now()}`;
+
+    // Find the highest sheet number to increment properly
+    const sheetNumbers = sheetOrder.map((id) => {
+      const match = sheets[id].name.match(/Sheet (\d+)/);
+      return match ? parseInt(match[1]) : 0;
+    });
+    const maxSheetNumber = Math.max(...sheetNumbers, 0);
+    const newSheetNumber = maxSheetNumber + 1;
+    const newSheetName = `Sheet ${newSheetNumber}`;
+
+    setSheets((prev) => ({
+      ...prev,
+      [newSheetId]: {
+        elements: [],
+        name: newSheetName,
+      },
+    }));
+
+    setSheetOrder((prev) => [...prev, newSheetId]);
+    setActiveSheetId(newSheetId);
+    setElements([]);
+
+    // Only emit if in a collaboration room
+    if (roomId && emitSheetCreate) {
+      emitSheetCreate(newSheetId, newSheetName);
+    }
+  };
+
+  const handleRenameSheet = (sheetId: string, newName: string) => {
+    if (userRole === "viewer") {
+      alert("You don't have permission to rename sheets");
+      return;
+    }
+
+    setSheets((prev) => ({
+      ...prev,
+      [sheetId]: {
+        ...prev[sheetId],
+        name: newName,
+      },
+    }));
+
+    // Only emit if in a collaboration room
+    if (roomId && emitSheetRename) {
+      emitSheetRename(sheetId, newName);
+    }
+  };
+
+  const handleDeleteSheet = (sheetId: string) => {
+    if (userRole === "viewer") {
+      alert("You don't have permission to delete sheets");
+      return;
+    }
+
+    // Prevent deleting the last sheet
+    if (sheetOrder.length <= 1) {
+      alert("Cannot delete the last sheet");
+      return;
+    }
+
+    // Confirm deletion
+    if (
+      !window.confirm(
+        `Are you sure you want to delete ${sheets[sheetId].name}?`,
+      )
+    ) {
+      return;
+    }
+
+    // If deleting the active sheet, switch to another sheet first
+    if (activeSheetId === sheetId) {
+      const currentIndex = sheetOrder.indexOf(sheetId);
+      const newActiveIndex = currentIndex > 0 ? currentIndex - 1 : 1;
+      const newActiveSheetId = sheetOrder[newActiveIndex];
+
+      setActiveSheetId(newActiveSheetId);
+      setElements(sheets[newActiveSheetId].elements);
+    }
+
+    // Remove the sheet
+    setSheets((prev) => {
+      const newSheets = { ...prev };
+      delete newSheets[sheetId];
+      return newSheets;
+    });
+
+    setSheetOrder((prev) => prev.filter((id) => id !== sheetId));
+
+    // Only emit if in a collaboration room
+    if (roomId && emitSheetDelete) {
+      emitSheetDelete(sheetId);
+    }
+  };
+
+  const handleDuplicateSheet = (sheetId: string) => {
+    if (userRole === "viewer") {
+      alert("You don't have permission to duplicate sheets");
+      return;
+    }
+
+    const newSheetId = `sheet-${Date.now()}`;
+    const originalSheet = sheets[sheetId];
+    const newSheetName = `${originalSheet.name} (Copy)`;
+
+    // Deep copy the elements
+    const copiedElements = originalSheet.elements.map((el) => ({
+      ...el,
+      id: generateId(), // Generate new IDs for copied elements
+    }));
+
+    setSheets((prev) => ({
+      ...prev,
+      [newSheetId]: {
+        elements: copiedElements,
+        name: newSheetName,
+      },
+    }));
+
+    setSheetOrder((prev) => [...prev, newSheetId]);
+
+    // Only emit if in a collaboration room
+    if (roomId && emitSheetCreate) {
+      emitSheetCreate(newSheetId, newSheetName);
+    }
+  };
+
+  // Load sheets from localStorage on mount
+  useEffect(() => {
+    const savedSheets = localStorage.getItem("canvas-sheets");
+    const savedActiveSheet = localStorage.getItem("canvas-active-sheet");
+    const savedSheetOrder = localStorage.getItem("canvas-sheet-order");
+
+    if (savedSheets) {
+      const parsedSheets = JSON.parse(savedSheets);
+      setSheets(parsedSheets);
+
+      if (savedActiveSheet && parsedSheets[savedActiveSheet]) {
+        setActiveSheetId(savedActiveSheet);
+        setElements(parsedSheets[savedActiveSheet].elements);
+      }
+
+      if (savedSheetOrder) {
+        setSheetOrder(JSON.parse(savedSheetOrder));
+      }
+    }
+  }, []);
+
+  // Save sheets to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem("canvas-sheets", JSON.stringify(sheets));
+    localStorage.setItem("canvas-active-sheet", activeSheetId);
+    localStorage.setItem("canvas-sheet-order", JSON.stringify(sheetOrder));
+  }, [sheets, activeSheetId, sheetOrder]);
+
   // Replace the useEffect for URL parameters
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -97,8 +320,31 @@ const Canvas: React.FC = () => {
       }
     }
   }, []);
-  // Setup collaboration hook
-  // Update the hook call
+
+  // managing the updated color box.
+  useEffect(() => {
+    if (selectedElementId) {
+      const element = elements.find((el) => el.id === selectedElementId);
+      if (element) {
+        if (element.type === "rectangle" || element.type === "circle") {
+          setSelectedElementColors({
+            fillColor: element.fillColor,
+            borderColor: element.borderColor,
+            borderWidth: element.borderWidth,
+          });
+        } else if (element.type === "arrow") {
+          setSelectedElementColors({
+            fillColor: "transparent",
+            borderColor: element.color,
+            borderWidth: element.strokeWidth,
+          });
+        }
+      }
+    } else {
+      setSelectedElementColors(null);
+    }
+  }, [selectedElementId, elements]);
+
   const {
     isConnected,
     userCount,
@@ -106,12 +352,33 @@ const Canvas: React.FC = () => {
     userRole,
     userList,
     changeUserPermission,
+    emitSheetCreate,
+    emitSheetSwitch,
+    emitSheetRename,
+    emitSheetDelete,
   } = useCollaboration({
     roomId,
     ownerId,
-    sessionToken, // Add this
-    elements,
-    onElementsUpdate: setElements,
+    sessionToken,
+    sheets,
+    activeSheetId,
+    sheetOrder,
+    onSheetsUpdate: (newSheets) => {
+      setSheets(newSheets);
+      // Also update current elements if active sheet changed
+      // @ts-ignore
+      if (newSheets[activeSheetId]) {
+        // @ts-ignore
+        setElements(newSheets[activeSheetId].elements);
+      }
+    },
+    onActiveSheetChange: (sheetId) => {
+      setActiveSheetId(sheetId);
+      if (sheets[sheetId]) {
+        setElements(sheets[sheetId].elements);
+      }
+    },
+    onSheetOrderUpdate: setSheetOrder,
     onSessionTokenReceived: (token) => {
       setSessionToken(token);
       if (roomId) {
@@ -119,16 +386,26 @@ const Canvas: React.FC = () => {
       }
     },
   });
+
   const canvasRef = useRef<HTMLDivElement>(null);
   const selectedElement = elements.find((el) => el.id === selectedElementId);
 
   // Create shareable room
   const handleCreateRoom = async () => {
-    console.log("Yes, i came here");
     try {
-      const response = await fetch(`http://3.7.156.63:3002/api/rooms/create`, {
+      // Save current sheets before creating room
+      const currentSheets = sheets;
+      const currentActiveSheet = activeSheetId;
+      const currentSheetOrder = sheetOrder;
+
+      const response = await fetch("http://localhost:3002/api/rooms/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sheets: currentSheets,
+          activeSheetId: currentActiveSheet,
+          sheetOrder: currentSheetOrder,
+        }),
       });
 
       const data = await response.json();
@@ -138,7 +415,6 @@ const Canvas: React.FC = () => {
       setRoomId(newRoomId);
       setOwnerId(newOwnerId);
 
-      // Store owner ID in localStorage
       localStorage.setItem(`owner_${newRoomId}`, newOwnerId);
 
       const newUrl = `${window.location.origin}${window.location.pathname}?room=${newRoomId}`;
@@ -158,12 +434,12 @@ const Canvas: React.FC = () => {
 
     try {
       const response = await fetch(
-        `http://3.7.156.63:3002/api/rooms/${roomId}/invite`,
+        `http://localhost:3002/api/rooms/${roomId}/invite`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ ownerId, role }),
-        }
+        },
       );
 
       if (!response.ok) {
@@ -254,11 +530,30 @@ const Canvas: React.FC = () => {
 
     if (isDragging && selectedElementId && dragStart) {
       setElements((prev) =>
-        prev.map((el) =>
-          el.id === selectedElementId
-            ? { ...el, x: x - dragStart.x, y: y - dragStart.y }
-            : el
-        )
+        prev.map((el) => {
+          if (el.id !== selectedElementId) return el;
+
+          const newX = x - dragStart.x;
+          const newY = y - dragStart.y;
+
+          // Special handling for arrows
+          if (el.type === "arrow") {
+            const deltaX = newX - el.x;
+            const deltaY = newY - el.y;
+
+            return {
+              ...el,
+              x: newX,
+              y: newY,
+              startX: el.startX + deltaX,
+              startY: el.startY + deltaY,
+              endX: el.endX + deltaX,
+              endY: el.endY + deltaY,
+            };
+          }
+
+          return { ...el, x: newX, y: newY };
+        }),
       );
     } else if (isResizing && selectedElementId && dragStart && resizeHandle) {
       setElements((prev) =>
@@ -268,6 +563,45 @@ const Canvas: React.FC = () => {
           const deltaX = x - dragStart.x;
           const deltaY = y - dragStart.y;
 
+          // Special handling for arrows - ADD THIS FIRST
+          if (el.type === "arrow") {
+            let newStartX = el.startX;
+            let newStartY = el.startY;
+            let newEndX = el.endX;
+            let newEndY = el.endY;
+
+            if (resizeHandle.includes("w")) {
+              newStartX = el.startX + deltaX;
+            }
+            if (resizeHandle.includes("e")) {
+              newEndX = el.endX + deltaX;
+            }
+            if (resizeHandle.includes("n")) {
+              newStartY = el.startY + deltaY;
+            }
+            if (resizeHandle.includes("s")) {
+              newEndY = el.endY + deltaY;
+            }
+
+            const newX = Math.min(newStartX, newEndX);
+            const newY = Math.min(newStartY, newEndY);
+            const newWidth = Math.abs(newEndX - newStartX);
+            const newHeight = Math.abs(newEndY - newStartY);
+
+            return {
+              ...el,
+              x: newX,
+              y: newY,
+              width: newWidth,
+              height: newHeight,
+              startX: newStartX,
+              startY: newStartY,
+              endX: newEndX,
+              endY: newEndY,
+            };
+          }
+
+          // Regular shapes and text handling - KEEP YOUR EXISTING CODE
           let newX = el.x;
           let newY = el.y;
           let newWidth = el.width;
@@ -297,7 +631,7 @@ const Canvas: React.FC = () => {
             const scale = (widthScale + heightScale) / 2;
             const newFontSize = Math.max(
               12,
-              Math.min(72, initialResizeSize.fontSize * scale)
+              Math.min(72, initialResizeSize.fontSize * scale),
             );
 
             return {
@@ -317,7 +651,7 @@ const Canvas: React.FC = () => {
             width: newWidth,
             height: newHeight,
           };
-        })
+        }),
       );
       setDragStart({ x, y });
     } else if (
@@ -371,7 +705,7 @@ const Canvas: React.FC = () => {
         selectedTool === "arrow")
     ) {
       setElements((prev) =>
-        prev.map((el) => (el.id === "temp" ? { ...el, id: generateId() } : el))
+        prev.map((el) => (el.id === "temp" ? { ...el, id: generateId() } : el)),
       );
       setDrawStart(null);
       setSelectedTool("select");
@@ -424,7 +758,7 @@ const Canvas: React.FC = () => {
 
   const handleResizeStart = (
     handle: ResizeHandle["position"],
-    e: React.MouseEvent
+    e: React.MouseEvent,
   ) => {
     if (!canvasRef.current || !selectedElementId) return;
 
@@ -450,14 +784,14 @@ const Canvas: React.FC = () => {
   const handleTextChange = (id: string, content: string) => {
     setElements((prev) =>
       prev.map((el) =>
-        el.id === id && el.type === "text" ? { ...el, content } : el
-      )
+        el.id === id && el.type === "text" ? { ...el, content } : el,
+      ),
     );
   };
 
   const handleTextResize = (id: string, newHeight: number) => {
     setElements((prev) =>
-      prev.map((el) => (el.id === id ? { ...el, height: newHeight } : el))
+      prev.map((el) => (el.id === id ? { ...el, height: newHeight } : el)),
     );
   };
 
@@ -562,6 +896,13 @@ const Canvas: React.FC = () => {
     });
   };
 
+  const handleDelete = () => {
+    if (selectedElementId) {
+      setElements((prev) => prev.filter((el) => el.id !== selectedElementId));
+      setSelectedElementId(null);
+    }
+  };
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (
@@ -615,8 +956,8 @@ const Canvas: React.FC = () => {
                   userRole === "owner"
                     ? "bg-purple-100 text-purple-800"
                     : userRole === "collaborator"
-                    ? "bg-blue-100 text-blue-800"
-                    : "bg-gray-100 text-gray-800"
+                      ? "bg-blue-100 text-blue-800"
+                      : "bg-gray-100 text-gray-800"
                 }`}
               >
                 {userRole}
@@ -646,8 +987,8 @@ const Canvas: React.FC = () => {
 
       {/* Share Modal */}
       {showShareModal && (
-        <div className="fixed inset-0 backdrop-blur-md bg-opacity-50 flex items-center justify-center z-50 ">
-          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto border shadow-xl">
+        <div className="fixed inset-0 backdrop-blur-md bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
             <h2 className="text-xl font-bold mb-4">Share Canvas</h2>
 
             <p className="text-gray-600 mb-4">
@@ -663,8 +1004,7 @@ const Canvas: React.FC = () => {
                 onClick={async () => {
                   const url = await handleGenerateInviteLink("collaborator");
                   if (url) {
-                    // navigator.clipboard.writeText(url);
-                    await copyToClipboard(url);
+                    navigator.clipboard.writeText(url);
                     alert("Collaborator link copied to clipboard!");
                   }
                 }}
@@ -684,8 +1024,7 @@ const Canvas: React.FC = () => {
                 onClick={async () => {
                   const url = await handleGenerateInviteLink("viewer");
                   if (url) {
-                    // navigator.clipboard.writeText(url);
-                    await copyToClipboard(url);
+                    navigator.clipboard.writeText(url);
                     alert("Viewer link copied to clipboard!");
                   }
                 }}
@@ -720,8 +1059,8 @@ const Canvas: React.FC = () => {
                             user.role === "owner"
                               ? "bg-purple-100 text-purple-800"
                               : user.role === "collaborator"
-                              ? "bg-blue-100 text-blue-800"
-                              : "bg-gray-100 text-gray-800"
+                                ? "bg-blue-100 text-blue-800"
+                                : "bg-gray-100 text-gray-800"
                           }`}
                         >
                           {user.role}
@@ -733,7 +1072,7 @@ const Canvas: React.FC = () => {
                           onChange={(e) =>
                             changeUserPermission(
                               user.socketId,
-                              e.target.value as "collaborator" | "viewer"
+                              e.target.value as "collaborator" | "viewer",
                             )
                           }
                           className="text-sm border rounded px-2 py-1"
@@ -773,13 +1112,64 @@ const Canvas: React.FC = () => {
       )}
 
       <Toolbar selectedTool={selectedTool} onToolChange={setSelectedTool} />
+
       <ColorPicker
-        fillColor={fillColor}
-        borderColor={borderColor}
-        borderWidth={borderWidth}
-        onFillColorChange={setFillColor}
-        onBorderColorChange={setBorderColor}
-        onBorderWidthChange={setBorderWidth}
+        fillColor={selectedElementColors?.fillColor || fillColor}
+        borderColor={selectedElementColors?.borderColor || borderColor}
+        borderWidth={selectedElementColors?.borderWidth || borderWidth}
+        onFillColorChange={(color) => {
+          if (selectedElementId) {
+            // Update selected element
+            setElements((prev) =>
+              prev.map((el) =>
+                el.id === selectedElementId &&
+                (el.type === "rectangle" || el.type === "circle")
+                  ? { ...el, fillColor: color }
+                  : el,
+              ),
+            );
+          } else {
+            setFillColor(color);
+          }
+        }}
+        onBorderColorChange={(color) => {
+          if (selectedElementId) {
+            // Update selected element
+            setElements((prev) =>
+              prev.map((el) => {
+                if (el.id === selectedElementId) {
+                  if (el.type === "rectangle" || el.type === "circle") {
+                    return { ...el, borderColor: color };
+                  } else if (el.type === "arrow") {
+                    return { ...el, color };
+                  }
+                }
+                return el;
+              }),
+            );
+          } else {
+            setBorderColor(color);
+          }
+        }}
+        onBorderWidthChange={(width) => {
+          if (selectedElementId) {
+            // Update selected element
+            setElements((prev) =>
+              prev.map((el) => {
+                if (el.id === selectedElementId) {
+                  if (el.type === "rectangle" || el.type === "circle") {
+                    return { ...el, borderWidth: width };
+                  } else if (el.type === "arrow") {
+                    return { ...el, strokeWidth: width };
+                  }
+                }
+                return el;
+              }),
+            );
+          } else {
+            setBorderWidth(width);
+          }
+        }}
       />
 
       <ZoomControls
@@ -787,6 +1177,18 @@ const Canvas: React.FC = () => {
         onZoomIn={handleZoomIn}
         onZoomOut={handleZoomOut}
         onZoomReset={handleZoomReset}
+      />
+
+      <SheetTabs
+        sheets={sheets}
+        activeSheetId={activeSheetId}
+        sheetOrder={sheetOrder}
+        onSheetChange={handleSheetChange}
+        onCreateSheet={handleCreateSheet}
+        onRenameSheet={handleRenameSheet}
+        onDeleteSheet={handleDeleteSheet}
+        onDuplicateSheet={handleDuplicateSheet}
+        userRole={userRole}
       />
 
       <LayerControls
@@ -798,6 +1200,7 @@ const Canvas: React.FC = () => {
         onSendToBack={handleSendToBack}
         onBringForward={handleBringForward}
         onSendBackward={handleSendBackward}
+        onDelete={handleDelete}
       />
 
       <div

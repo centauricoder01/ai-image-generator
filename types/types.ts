@@ -102,3 +102,51 @@ export interface ResizeHandle {
   x: number;
   y: number;
 }
+
+
+export interface Point {
+  x: number;
+  y: number;
+}
+
+export interface BaseElement {
+  id: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface ShapeElement extends BaseElement {
+  type: "rectangle" | "circle";
+  fillColor: string;
+  borderColor: string;
+  borderWidth: number;
+}
+
+export interface TextElement extends BaseElement {
+  type: "text";
+  content: string;
+  baseFontSize: number;
+}
+
+export interface ImageElement extends BaseElement {
+  type: "image";
+  src: string;
+}
+
+export interface ArrowElement extends BaseElement {
+  type: "arrow";
+  startX: number;
+  startY: number;
+  endX: number;
+  endY: number;
+  color: string;
+  strokeWidth: number;
+}
+
+export interface ResizeHandle {
+  position: "nw" | "ne" | "sw" | "se" | "n" | "s" | "e" | "w";
+  x: number;
+  y: number;
+}

@@ -1,3 +1,5 @@
+"use client"
+
 export const ColorPicker: React.FC<{
   fillColor: string;
   borderColor: string;

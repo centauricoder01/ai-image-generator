@@ -1,3 +1,5 @@
+"use client"
+
 import { ArrowRight, Circle, Image, MousePointer, Square, Type } from "lucide-react";
 import type { Tool } from "../../types/types";
 

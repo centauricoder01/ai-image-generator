@@ -1,3 +1,5 @@
+"use client"
+
 export const ZoomControls: React.FC<{
   zoom: number;
   onZoomIn: () => void;

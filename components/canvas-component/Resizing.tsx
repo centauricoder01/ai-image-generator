@@ -1,5 +1,7 @@
+"use client"
+
 import type { CanvasElement, ResizeHandle } from "../../types/types";
-import { getResizeHandles } from "../../lib/utils";
+import { getResizeHandles } from "../../utils/func";
 
 export const ResizeHandles: React.FC<{
   element: CanvasElement;

@@ -1,3 +1,5 @@
+"use client"
+
 import type { ShapeElement } from "../../types/types";
 
 export const Shape: React.FC<{

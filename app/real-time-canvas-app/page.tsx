@@ -26,6 +26,8 @@ import { Arrow } from "../../components/canvas-component/Arrow";
 import { LayerControls } from "../../components/canvas-component/LayerControls";
 import { SheetTabs } from "../../components/canvas-component/SheetTabs";
 
+const url = "http://65.1.139.176:3002/"
+
 const Canvas: React.FC = () => {
   const [elements, setElements] = useState<CanvasElement[]>([]);
   const [selectedTool, setSelectedTool] = useState<Tool>("select");
@@ -398,7 +400,7 @@ const Canvas: React.FC = () => {
       const currentActiveSheet = activeSheetId;
       const currentSheetOrder = sheetOrder;
 
-      const response = await fetch("http://localhost:3002/api/rooms/create", {
+      const response = await fetch(`${url}api/rooms/create`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -434,7 +436,7 @@ const Canvas: React.FC = () => {
 
     try {
       const response = await fetch(
-        `http://localhost:3002/api/rooms/${roomId}/invite`,
+        `${url}api/rooms/${roomId}/invite`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
